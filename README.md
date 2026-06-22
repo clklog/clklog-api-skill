@@ -26,12 +26,12 @@ ClkLog API Skill，支持导入 WorkBuddy、Codex 等 AI 开发平台。通过�
 
 ### 3.1 引用技能
 
-引用技能。
+引用技能：
 <img src="https://clklog.com/assets/imgs/skill/1.png" alt="">
 
 ### 3.2 输入要分析的内容
 
-并输入要分析的内容，如：分析前两周的网站访问流量、近六个月的网站留存率等，输入完成后点击发送按钮。
+并输入要分析的内容，如：分析前两周的网站访问流量、近六个月的网站留存率等，输入完成后点击发送按钮：
 
 <img src="https://clklog.com/assets/imgs/skill/2.png" alt="">
 
@@ -39,7 +39,7 @@ ClkLog API Skill，支持导入 WorkBuddy、Codex 等 AI 开发平台。通过�
 
 #### 3.3.1 获取 API 密钥
 
-登录您私有化部署的 ClkLog 社区版环境，进入【密钥管理】菜单获取并复制 API 密钥。
+登录您私有化部署的 ClkLog 社区版环境，进入【密钥管理】菜单获取并复制 API 密钥：
 
 <img src="https://clklog.com/assets/imgs/skill/3.png" alt="">
 
@@ -55,7 +55,7 @@ ClkLog API Skill，支持导入 WorkBuddy、Codex 等 AI 开发平台。通过�
 
 <img src="https://clklog.com/assets/imgs/skill/5.png" alt="">
 
-#### 3.3.4 输入分析 API 接口地址
+#### 3.3.4 输入管理 API 接口地址
 
 - 替换为您私有化部署的 ClkLog 社区版管理 API 地址，接口地址示例：<https://demo.clklog.com/manage>
 
