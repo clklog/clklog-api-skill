@@ -1,9 +1,5 @@
 # clklog-api-skill
 
-#
-
- <!-- ClkLog 现已推出 AI Skill，一键导入 WorkBuddy、Codex 等 AI 工具。无需编写代码，用对话就能完成多维度数据分析，让埋点数据真正 "活" 起来。 -->
-
 ClkLog API Skill，支持导入 WorkBuddy、Codex 等 AI 开发平台。通过自然对话即可调用 ClkLog 数据分析能力，快速获取多维度的用户行为与业务指标分析结果。
 
 # 使用说明
