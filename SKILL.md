@@ -23,11 +23,13 @@ agent_created: true
 直接向用户输出以下提示：
 
 ```
-🔧 ClkLog 社区版 API 首次请求 — 请配置以下信息（空格或换行分隔）：
+🔧 ClkLog 社区版 API 首次请求，请配置您【私有化部署的 ClkLog 社区版】的以下信息（空格或换行分隔）：
 
-1. API Key:        （登录您私有化部署的ClkLog社区版后台 → 密钥管理 → 创建并复制密钥，格式 clk_xxxx）
-2. 分析 API 地址:   （您私有化部署的ClkLog社区版分析API请求地址，如 https://demo.clklog.com/api）
-3. 管理 API 地址:   （您私有化部署的ClkLog社区版管理API请求地址，如 https://demo.clklog.com/manage）
+1. API Key：  登录ClkLog后台 → 密钥管理 → 创建并复制密钥，格式 clk_xxxx
+
+2. 分析 API 地址：ClkLog分析 API 的请求地址，如 https://demo.clklog.com/api
+
+3. 管理 API 地址：ClkLog管理 API 的请求地址，如 https://demo.clklog.com/manage
 
 回复示例：
 clk_abc123  https://demo.clklog.com/api  https://demo.clklog.com/manage
