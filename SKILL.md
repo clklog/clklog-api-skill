@@ -1,6 +1,7 @@
 ---
 name: clklog-community-api
-description: 当用户需要调用或查询 ClkLog 社区版API (https://demo.clklog.com) 或管理 API 时使用此技能。 分析 API 覆盖流量趋势、访客分析、受访页面、忠诚度、地域、来源网站、 搜索词、操作系统、设备、渠道、App崩溃、数据下载等。 管理 API 覆盖项目列表等。
+description: ClkLog 社区版API：覆盖流量趋势、访客分析、受访页面、忠诚度、地域、来源网站、搜索词、操作系统、设备、渠道、App崩溃等数据分析。此技能也应在以下场景被触发：用户提及 ClkLog 配置/设置/安装/导入、用户说"配置 ClkLog"、"设置 ClkLog API"、"ClkLog 技能导入后"、"ClkLog 已安装"、"刚导入 ClkLog"、"ClkLog 装好了"、或用户明确表达了配置 ClkLog API Key 与 API 地址的意图。技能加载后如发现配置缺失，会自动引导用户完成首次配置流程。
+requiresSetup: true
 agent_created: true
 ---
 
@@ -10,82 +11,81 @@ agent_created: true
 - **ClkLog 社区版分析 API**（路径前缀 `/api`）：流量趋势、访客分析、受访页面、地域、来源网站、搜索词、忠诚度、渠道、设备、操作系统、App 崩溃、下载等分析类接口
 - **ClkLog 社区版管理 API**（路径前缀 `/manage`）：项目管理（获取项目列表）
 
-## 配置（首次使用时由用户提供）
+## ⚡ 配置检查与引导（最高优先级）
 
-此技能的 API Key 和 API 基础 URL **不是预置的**，需要用户首次使用时配置。项目编码不需要用户手动输入——首次使用时会通过管理 API 自动获取项目列表，由用户选择要分析的项目。ClkLog 社区版支持多个项目的数据分析，用户可能在分析过程中切换不同的项目。
+技能加载后，第一步必须检查当前项目的 `.workbuddy/memory/MEMORY.md` 中是否存在 `## ClkLog 社区版 API 配置` 段落。
 
-### 配置流程
+- **配置完整**（含 `api_key`、`analytics_base_url`、`manage_base_url`、`projects`、`default_project`）→ 直接使用，执行用户请求。
+- **配置缺失或不完整** → 立即按下方流程引导配置，**不要先响应用户的数据查询需求**。
 
-1. **读取配置**：检查当前项目的 `.workbuddy/memory/MEMORY.md`，查找以 `## ClkLog 社区版 API 配置` 为标题的段落。如果找到，直接使用其中记录的 `api_key`、`analytics_base_url`、`manage_base_url`、项目列表和默认项目，跳到后续工作流程。
+### 第一步：收集 API Key 和地址
 
-2. **第二步 — API Key 与 API 地址**：如果未找到配置段落，使用**一次** `AskUserQuestion` 调用，包含三个问题：问题一收集 API Key（文本框输入），问题二收集分析 API 地址（文本框输入），问题三收集管理 API 地址（文本框输入）。用户一次填完、无需多轮交互。
+直接向用户输出以下提示：
 
-   **问题一 — API Key**（文本框输入，`options: []`）：
-   > "请输入你的 ClkLog API Key
-   >      获取步骤：1. 登录 ClkLog 后台 → 2. 进入「密钥管理」→ 3. 创建并复制 API Key（格式 clk_xxxx）"
-   - `options: []` — 纯文本框，无选项按钮
+```
+🔧 ClkLog 社区版 API 首次请求 — 请配置以下信息（空格或换行分隔）：
 
-   **问题二 — ClkLog 分析 API 地址**（文本框输入，`options: []`）：
-   > "请输入你的 ClkLog 分析 API 地址（示例：https://yourclklogdomain.com/api）"
-   - `options: []` — 纯文本框，无选项按钮
+1. API Key:        （登录您私有化部署的ClkLog社区版后台 → 密钥管理 → 创建并复制密钥，格式 clk_xxxx）
+2. 分析 API 地址:   （您私有化部署的ClkLog社区版分析API请求地址，如 https://demo.clklog.com/api）
+3. 管理 API 地址:   （您私有化部署的ClkLog社区版管理API请求地址，如 https://demo.clklog.com/manage）
 
-   **问题三 — ClkLog 管理 API 地址**（文本框输入，`options: []`）：
-   > "请输入你的 ClkLog 管理 API 地址（示例：https://yourclklogdomain.com/manage）"
-   - `options: []` — 纯文本框，无选项按钮
+回复示例：
+clk_abc123  https://demo.clklog.com/api  https://demo.clklog.com/manage
+```
 
-   **解析规则**（拿到回答后）：
-   - API Key：从问题一提取。
-   - 用户输入完整路径（含 `/api` 或 `/manage`）→ 直接使用，不追加后缀
-   - 用户输入基础域名（如 `https://yourclklogdomain.com`）→ 自动补齐为 `https://yourclklogdomain.com/api` 或 `https://yourclklogdomain.com/manage`
-   - 其中一个地址留空 → 从填写的那个推导。如只填了分析 API `https://a.com/api`，管理 API 自动推导为 `https://a.com/manage`
-   - **无需追问用户补全**，直接推导后进入第三步
+**解析规则：**
 
-3. **第三步 — 获取项目列表并选择项目**：拿到 API Key 和 URL 后，立即调用管理 API `/project/getlist`（请求体含 `pageNum: 1, pageSize: 100`，建议设置较大 `pageSize` 一次性获取全部项目）获取项目列表。将项目列表以"项目名称（编码）"的形式展示给用户，使用 `AskUserQuestion` 工具让用户选择：
-   - 要分析的项目（可多选）
-   - 默认分析的项目（从已选项目中指定一个）
+用户回复可能使用空格或换行分隔。解析时先统一替换换行为空格，再按空格拆分，取前三个非空字段：
 
-   **不要让用户手动输入项目编码**——用户通常不知道编码是什么，必须从 API 返回结果中让用户选择。
+- **API Key**：第一个字段（`clk_` 开头），去除前后空格和引号。
+- **分析 API 地址**：第二个字段。
+  - 已含 `/api` → 直接使用。
+  - 仅为基础域名（如 `https://a.com`）→ 自动补齐 `/api` 后缀。
+- **管理 API 地址**：第三个字段。
+  - 已含 `/manage` → 直接使用。
+  - 仅为基础域名（如 `https://a.com`）→ 自动补齐 `/manage` 后缀。
 
-4. **持久化**：将配置和项目信息写入当前项目的 `.workbuddy/memory/MEMORY.md`，格式如下：
-   ```
-   ## ClkLog 社区版 API 配置
-   - analytics_base_url: https://demo.clklog.com/api
-   - manage_base_url: https://demo.clklog.com/manage
-   - api_key: clk_xxxx（用户提供）
-   - default_project: hqq（用户选择的项目编码）
-   - projects: hqq(货清清), zcunsoft(至存官网), clklog(clklog官网)（编码(名称)格式，逗号分隔）
-   ```
+### 第二步：选择默认项目
 
-5. **后续使用**：每次调用 ClkLog API 时，从 `.workbuddy/memory/MEMORY.md` 读取配置值，用于：
-   - 请求头 `X-API-Key`
-   - 请求 URL 的基础路径（分析 API 或管理 API）
-   - 请求体中的 `projectName` 字段（根据下方"项目编码选择规则"确定）
+拿到配置后，立即调用 `/project/getlist`（`{ pageNum: 1, pageSize: 100 }`），用管理 API 地址发送请求。
+
+将返回的项目列表展示为"名称（编码）"格式，用 `AskUserQuestion` 让用户选择一个**默认项目**。
+
+> 不要让用户手动输入项目编码——始终从 API 返回结果中让用户点击选择。
+
+### 第三步：持久化
+
+将配置写入 `.workbuddy/memory/MEMORY.md`：
+
+```
+## ClkLog 社区版 API 配置
+- api_key: clk_xxxx
+- analytics_base_url: https://demo.clklog.com/api
+- manage_base_url: https://demo.clklog.com/manage
+- default_project: hqq
+- projects: hqq(货清清), zcunsoft(至存官网)
+```
+
+写入完成后，回头处理用户的原始需求。后续使用直接读取此配置，不再重复。
 
 ### 项目编码选择规则
 
-`projectName` 是 ClkLog 管理后台中配置的**项目编码**（不是项目名称），不同项目编码对应不同的数据集。用户通常只知道项目名称（如"货清清"），不知道编码（如"hqq"）。确定 `projectName` 的优先级：
+`projectName` 是项目编码（非项目名称）。确定规则按优先级：
 
-1. **用户明确指定编码** — 用户说了"查 hqq 项目的流量"或"用 project2 来查"，则直接使用指定编码
-2. **用户指定项目名称** — 用户说了"查货清清的流量"或"帮我分析至存官网"，则从 MEMORY.md 的 `projects` 列表中查找对应的 `projectName`（编码(名称)格式中的编码部分）
-3. **使用默认项目** — 以上都无法确定时，使用配置中的 `default_project`
+1. 用户**说了编码**（如"查 hqq 项目"）→ 直接使用。
+2. 用户**说了名称**（如"查货清清"）→ 从 `projects` 列表中匹配对应编码。
+3. 都不匹配 → 使用 `default_project`。
 
-**重要**：
-- **不要让用户手动输入项目编码**。如果 MEMORY.md 中没有项目列表，先调用 `/project/getlist` 获取后展示给用户选择
-- 如果用户提及了一个不在 `projects` 列表中的项目编码或名称，调用 `/project/getlist` 刷新项目列表，将其追加到 MEMORY.md 配置的 `projects` 字段中
-- 切换项目编码时，渠道、地域等维度数据也随之变化。务必重新调用 `/channel/getChannelList`（传入新的 projectName）获取该项目的可用渠道
+> - 若 `projects` 中找不到目标项目 → 刷新 `/project/getlist` 并追加到配置。
+> - 切换项目后需重新调用 `/channel/getChannelList` 获取该项目的渠道列表。
 
 ## 目的
 
-正确调用 ClkLog 社区版分析 API 和 管理 API 接口，构建合理的请求结构并处理响应。所有接口均使用 `POST` 方法，请求体为 JSON 格式。
-
-- **分析 API 基础 URL**：从 `.workbuddy/memory/MEMORY.md` 读取（用户首次使用时配置）
-- **管理 API 基础 URL**：从 `.workbuddy/memory/MEMORY.md` 读取（用户首次使用时配置），仅用于获取项目列表
-- **所有请求**：`Content-Type: application/json`
+正确调用 ClkLog 社区版分析 API 和 管理 API 接口，构建合理的请求结构并处理响应。所有接口均使用 `POST` 方法，请求体为 JSON 格式，统一请求头 `Content-Type: application/json`。管理 API 仅用于获取项目列表。
 
 ## 参考文档
 
-- 加载 `references/api_docs.md` 获取 ClkLog 社区版 API 的完整接口列表、请求/响应结构和字段说明（全部 13 个模块）。
-- ClkLog 社区版管理 API 的项目管理接口文档也在 `references/api_docs.md` 的"十三、项目管理"章节中（仅包含 `/project/getlist`）。
+- 加载 `references/api_docs.md` 获取 ClkLog 社区版 API 的完整接口列表、请求/响应结构和字段说明（含分析 API 13 个模块，管理 API 仅 `/project/getlist`）。
 
 ## 关键约定
 
@@ -142,28 +142,17 @@ X-API-Key: <从 .workbuddy/memory/MEMORY.md 读取 api_key>
 | App 崩溃分析 | `/appCrashed/` | totalSummary, trendSummary, groupedSummary, getPagedSummary, getPage |
 | 下载统计结果 | `/download/` | exportFlowTrendDetail, exportVisitorDetail, exportVisitor, exportVisitorList, exportVisitUriDetail, exportSourceWebsiteDetail, exportSearchWordDetail, exportDeviceDetail, exportChannelDetail, exportAreaDetail |
 
-## 管理 API 模块概览
-
-ClkLog 社区版管理 API 基础 URL 不同于分析 API（由用户配置），但认证方式相同（X-API-Key）。
-
-| 模块 | 路径前缀 | 主要接口 |
-|------|----------|----------|
-| 项目管理 | `/project/` | getlist |
-
-**最常用接口**：`/project/getlist`（分页获取项目列表，请求含 `pageNum` 和 `pageSize`，用于自动发现项目和配置）
+> 管理 API 仅 `/project/getlist` 一个接口，用于获取项目列表，基础 URL 为 `manage_base_url`。
 
 ## 工作流程
 
-1. **检查配置** — 读取 `.workbuddy/memory/MEMORY.md` 中的 ClkLog 社区版 API 配置。如果未找到，按照"配置流程"引导用户完成配置：① 一次询问 API Key + 分析 API 地址 + 管理 API 地址（三个问题在一个表单，用户一次完成）→ ② 调用管理 API 获取项目列表，让用户选择项目和默认项目。
-2. **获取项目列表并选择项目** — 如果配置中缺少项目列表，调用管理 API `/project/getlist`（请求体 `{ pageNum: 1, pageSize: 100 }`）获取用户所有授权项目，以"项目名称（编码）"格式展示给用户，请用户选择要分析的项目并设为默认项目。**不要让用户手动输入项目编码**，必须从 API 返回结果中选择。将选定的项目和完整项目列表写入 MEMORY.md。
-3. **确定项目编码** — 根据用户请求和"项目编码选择规则"确定本次调用使用的 `projectName`。用户提到项目名称时，从 projects 列表中查找对应的编码。
-4. **获取项目维度** — 如果涉及渠道筛选且尚未缓存该项目的渠道列表，先调用 `/channel/getChannelList`（传入确定的 projectName）获取可用渠道的 displayName。
-5. **添加 X-API-Key 请求头** — 在每个请求中包含 `X-API-Key: <api_key>`（从配置读取）。
-6. **选择正确的基础 URL**：分析接口 → `analytics_base_url`；项目列表接口 → `manage_base_url`。
-7. 阅读 `references/api_docs.md` 定位正确的接口和请求结构。
-8. 构建包含所有必填字段的 JSON 请求体，`projectName` 使用步骤 3 确定的值。
-9. 解析响应 — 分析 API 和管理 API 均检查 `code === 200`（整数）。两者成功码相同。
-10. 对于下载接口，将二进制响应保存为文件（如 `.xlsx`）。
+1. **检查配置** — 读取 `.workbuddy/memory/MEMORY.md`，缺失或不完整时按「配置检查与引导」完成配置。
+2. **确定项目编码** — 按"项目编码选择规则"确定 `projectName`。
+3. **获取渠道维度** — 若涉及渠道筛选，先调用 `/channel/getChannelList`（传入 `projectName`）获取可用的 `displayName`。
+4. 阅读 `references/api_docs.md` 定位接口和请求结构。
+5. 构建 JSON 请求体，包含 `X-API-Key` 请求头，并选择正确的基础 URL（分析接口 → `analytics_base_url`，项目列表 → `manage_base_url`）。
+6. 解析响应 — 检查 `code === 200`。
+7. 下载接口将二进制响应保存为文件（如 `.xlsx`）。
 
 ## 调用示例 (curl)
 
@@ -205,5 +194,4 @@ curl -X POST "<manage_base_url>/project/getlist" \
 - **时区注意事项**：使用 UTC 时间戳时（如 `"2026-06-07T16:00:00Z"` 表示 GMT+8 的 6月8日0点），API 可能按 UTC 日期分组导致包含前一天数据。建议查询时适当调整时间范围。
 - **访客分析路径**：社区版使用 `/visitor/` 前缀（非旧的 `/user/` 前缀），如 `/visitor/getVisitor`。
 - 下载接口返回二进制文件流 — 请使用适当的 HTTP 处理方式保存文件。
-- **管理 API URL**：项目列表接口使用 `manage_base_url`（用户配置），与分析 API 的 `analytics_base_url`（用户配置）路径不同但同域同认证。
 - **Windows 环境推荐使用 Node.js 调用 API**：在 Windows/Git Bash 下 curl 传入含中文的 JSON（如 `"visitorType":"全部"`）会返回 400 Bad Request。推荐使用 Node.js `https` 模块发送请求，避免编码问题。`--data-binary @file.json` 方式在 Windows 下也可能失败。
